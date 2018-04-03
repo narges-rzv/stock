@@ -18,22 +18,43 @@ def load_data(dir1='../data/', datefrom='', dateto=''):
     datadic = {}
     filenames = listdir(dir1)
     for fname in filenames:
-        f = open(dir1+fname, 'r')
-        datadic[fname]={}
-        for l in f.readlines()[1:]:
-            ws = l.strip().split(',')
-            date1 = parser.parse(ws[0]) 
-            if datefrom != '' and dateto != '':
-                if (date1 > parser.parse(datefrom)) and (date1 < parser.parse(dateto)) : 
-                    datadic[fname][date1] = np.array([float(ws[1]),float(ws[2]),float(ws[3]),float(ws[4]),float(ws[5])])
+        try:
+            print('parsing filename', fname)
+            f = open(dir1+fname, 'r')
+            datadic[fname]={}
+            for l in f.readlines()[1:]:
+                ws = l.strip().split(',')
+                date1 = parser.parse(ws[0]) 
+                if datefrom != '' and dateto != '':
+                    if (date1 > parser.parse(datefrom)) and (date1 < parser.parse(dateto)) : 
+                        datadic[fname][date1] = np.array([float(ws[1]),float(ws[2]),float(ws[3]),float(ws[4]),float(ws[5])])
+                        #print(fname, date1, ws)
+        except:
+            pass #print('problem with file', fname)
     return datadic
 
-def day_of_week(datadic):
+def day_of_week(datadic, index1=0):
     plot_data = {}
+    labels = ['mon','tue','wed','thu','fri','sat','sun']
+
     for key1 in datadic:
         weekdayssum = np.zeros((7, len(datadic[key1])), dtype=float)
         for ix, d in enumerate(datadic[key1]):
             weekdayssum[d.weekday(), ix ] = datadic[key1][d][3]
+        
+        dayofweekDeltaAvg = np.zeros(weekdayssum.shape, dtype=float)
+        startIx = 0
+        previous = np.max(weekdayssum[:,startIx])
+
+        for ix in range(startIx+1, weekdayssum.shape[1]):
+            dayofweek = np.argmax(weekdayssum[:,ix])
+            dayofweekDeltaAvg[dayofweek, ix - startIx -1] = weekdayssum[dayofweek,ix] - previous
+            if dayofweek in [5,6]: #saturday and sunday:
+                continue
+            previous = weekdayssum[dayofweek,ix]
+
+        dayofweekDeltaAvg = dayofweekDeltaAvg[:,0:weekdayssum.shape[1]-1]
+        weekdayssum = dayofweekDeltaAvg
         cnt = (weekdayssum != 0).sum(axis=1).ravel()
         weekdayssum[weekdayssum==0] = np.nan
         avgweekday = np.nanmean(weekdayssum, axis=1)
@@ -42,10 +63,10 @@ def day_of_week(datadic):
         high = avgweekday + (1.96/np.sqrt(cnt)) * stdweekday
         print('average opening for ', key1, ' is:', [('{0:4.3f}'.format(avgweekday[i]) + ' [' + '{0:4.3f}'.format(low[i]) + ' ' + '{0:4.3f}'.format(high[i]) + ']') for i in range(0,5)])
         plot_data[key1] = avgweekday, stdweekday
-    labels = ['mon','tue','wed','thu','fri','sat','sun']
+
     return plot_data, labels
 
-def month_of_year(datadic, index1=1):
+def month_of_year(datadic, index1=0, monthfrom=-1):
     plot_data = {}
     labels = ['jan', 'feb', 'mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
     
@@ -68,14 +89,29 @@ def month_of_year(datadic, index1=1):
                 currMonthSum += datadic[key1][d][index1]
                 currMonthCnt += 1
             monthssum[d.month - 1, ix] = datadic[key1][d][index1]
+
         monthBulkAvg = monthBulkAvg[:, 0:(totalMonthsSpan-1)]
 
         monthDeltaAvg = np.zeros(monthBulkAvg.shape, dtype=float)
-        previous = np.max(monthBulkAvg[:,0])
-        for ix in range(1, monthBulkAvg.shape[1]):
+        startIx = 0
+        previous = np.max(monthBulkAvg[:,startIx])
+
+        if monthfrom != -1 :
+            month = np.argmax(monthBulkAvg[:,startIx])
+            previous = monthBulkAvg[month,startIx]
+            while month != monthfrom :
+                startIx += 1
+                month = np.argmax(monthBulkAvg[:,startIx])
+                previous = monthBulkAvg[month,startIx]
+
+        for ix in range(startIx+1, monthBulkAvg.shape[1]):
             month = np.argmax(monthBulkAvg[:,ix])
-            monthDeltaAvg[month, ix-1] = monthBulkAvg[month,ix] - previous
-            previous = monthBulkAvg[month,ix]
+            monthDeltaAvg[month, ix - startIx -1] = monthBulkAvg[month,ix] - previous
+            if monthfrom == -1:
+                previous = monthBulkAvg[month,ix]
+            else:
+                if month == monthfrom :
+                    previous = monthBulkAvg[month,ix]
 
         monthDeltaAvg = monthDeltaAvg[:,0:monthBulkAvg.shape[1]-1]
 
