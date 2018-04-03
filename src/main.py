@@ -19,7 +19,7 @@ def load_data(dir1='../data/', datefrom='', dateto=''):
     filenames = listdir(dir1)
     for fname in filenames:
         try:
-            print('parsing filename', fname)
+            #print('parsing filename', fname)
             f = open(dir1+fname, 'r')
             datadic[fname]={}
             for l in f.readlines()[1:]:
