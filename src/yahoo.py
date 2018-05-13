@@ -29,6 +29,8 @@ def get_time(date):
 def get_range(symbol, crumb, cookies, from_time, to_time):
     f = get_time(from_time)
     t = get_time(to_time)
+    if f == t:
+        return ''
     url = ("https://query1.finance.yahoo.com/v7/" + \
         "finance/download/{0}?period1={1}&period2={2}" + \
         "&interval=1d&events=history&crumb={3}").format(symbol, f, t, crumb)
@@ -58,10 +60,19 @@ def download(symbol, startdate, enddate, state):
                         with open(args.state, "w") as s_out:
                             cobj = requests.utils.dict_from_cookiejar(cookies)
                             json.dump([ crumb, cobj ], s_out)
-            # print("getting {0}".format(sym))
-            data = get_range(sym, crumb.strip(), cookies, startdate, enddate)
-            with open("prices/{0}.csv".format(sym), "w") as f_out:
-                print(data, file=f_out)
+            f = open("prices/{0}.csv".format(sym), "r")
+            try:
+                last_date_in_csv = f.readlines()[-2].split(',')[0]
+            except:
+                last_date_in_csv = None
+            if last_date_in_csv is not None:
+                data = get_range(sym, crumb.strip(), cookies, last_date_in_csv, enddate)
+            else:
+                data = get_range(sym, crumb.strip(), cookies, startdate, enddate)
+            print(data)
+            f_out = open("prices/{0}.csv".format(sym), "a")
+            print(data, file=f_out)
+            f_out.flush();f_out.close()
         except ValueError:
             continue
         

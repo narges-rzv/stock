@@ -4,15 +4,7 @@ from dateutil import parser
 import numpy as np
 import matplotlib.pylab as plt
 from urllib.request import Request, urlopen
-
 import urllib
-
-'''Doesn't work yet :( '''
-def download_historical_data(stname='amzn', dir1='../data/'):
-    stock_url = 'https://query1.finance.yahoo.com/v7/finance/download/'+stname+'?period1=1343620800&period2=1501387200&interval=1d&events=history&crumb=xBC5oaavHyP'
-    print(stock_url)
-    fname=dir1+stname+'.csv'
-    response = urlopen(stock_url)
 
 def load_data(dir1='../data/', datefrom='', dateto=''):
     datadic = {}
@@ -23,12 +15,15 @@ def load_data(dir1='../data/', datefrom='', dateto=''):
             f = open(dir1+fname, 'r')
             datadic[fname]={}
             for l in f.readlines()[1:]:
-                ws = l.strip().split(',')
-                date1 = parser.parse(ws[0]) 
-                if datefrom != '' and dateto != '':
-                    if (date1 > parser.parse(datefrom)) and (date1 < parser.parse(dateto)) : 
-                        datadic[fname][date1] = np.array([float(ws[1]),float(ws[2]),float(ws[3]),float(ws[4]),float(ws[5])])
-                        #print(fname, date1, ws)
+                try:
+                    ws = l.strip().split(',')
+                    date1 = parser.parse(ws[0]) 
+                    if datefrom != '' and dateto != '':
+                        if (date1 > parser.parse(datefrom)) and (date1 < parser.parse(dateto)) : 
+                            datadic[fname][date1] = np.array([float(ws[1]),float(ws[2]),float(ws[3]),float(ws[4]),float(ws[5])])
+                            #print(fname, date1, ws)
+                except:
+                    pass
         except:
             pass #print('problem with file', fname)
     return datadic
